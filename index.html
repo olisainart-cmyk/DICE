@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DICE">
+  <meta name="theme-color" content="#2563eb">
+  <title>DICE - Daily Investment in Continuous Excellence</title>
+  
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="manifest" href="manifest.json">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      overscroll-behavior-y: contain;
+    }
+
+    @keyframes rollDice {
+      0% { transform: translateX(-100vw) rotate(0deg); }
+      100% { transform: translateX(100vw) rotate(720deg); }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes growLetter {
+      from { transform: scale(0); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .roll-animation {
+      animation: rollDice 2s ease-in-out;
+    }
+
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    .grow-letter {
+      animation: growLetter 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <script>
+    const { useState, useRef, useEffect, createElement: h } = React;
+
+    // Icon components
+    const Check = ({ size = 24, className = "" }) => 
+      h('svg', { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round", className }, 
+        h('polyline', { points: "20 6 9 17 4 12" })
+      );
+
+    const X = ({ size = 24, className = "" }) => 
+      h('svg', { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className }, 
+        h('line', { x1: "18", y1: "6", x2: "6", y2: "18" }),
+        h('line', { x1: "6", y1: "6", x2: "18", y2: "18" })
+      );
+
+    const Download = ({ size = 24, className = "" }) => 
+      h('svg', { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className }, 
+        h('path', { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+        h('polyline', { points: "7 10 12 15 17 10" }),
+        h('line', { x1: "12", y1: "15", x2: "12", y2: "3" })
+      );
+
+    const ChevronLeft = ({ size = 24, className = "" }) => 
+      h('svg', { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className }, 
+        h('polyline', { points: "15 18 9 12 15 6" })
+      );
+
+    const ChevronRight = ({ size = 24, className = "" }) => 
+      h('svg', { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className }, 
+        h('polyline', { points: "9 18 15 12 9 6" })
+      );
+
+    const Copy = ({ size = 24, className = "" }) => 
+      h('svg', { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className }, 
+        h('rect', { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" }),
+        h('path', { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })
+      );
+
+    // Motivational quotes
+    const quotes = [
+      "It's not about the score you get, it's the fact that you competed",
+      "Every roll counts. Show up today.",
+      "Progress over perfection, always",
+      "The best dice roll is the one you actually make",
+      "Consistency beats intensity every time",
+      "Small daily improvements lead to stunning results",
+      "You don't have to be perfect, you just have to start",
+      "The score doesn't define you, your effort does",
+      "Every day is a fresh roll of the dice",
+      "Show up, roll the dice, repeat",
+      "Your only competition is yesterday's you",
+      "1/6 is infinitely better than 0/6",
+      "The journey of 1000 rolls begins with one",
+      "Discipline is choosing between what you want now and what you want most",
+      "Success is the sum of small efforts repeated daily"
+    ];
+
+    // Storage utilities
+    const storage = {
+      get: (key) => {
+        try {
+          const item = localStorage.getItem(key);
+          return item ? JSON.parse(item) : null;
+        } catch {
+          return null;
+        }
+      },
+      set: (key, value) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+          console.error('Storage error:', e);
+        }
+      }
+    };
+
+    // Get daily quote based on date
+    const getDailyQuote = () => {
+      const today = new Date().toDateString();
+      const hash = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      return quotes[hash % quotes.length];
+    };
+
+    function DiceApp() {
+      const [showSplash, setShowSplash] = useState(!sessionStorage.getItem('splashShown'));
+      const [splashStage, setSplashStage] = useState('roll');
+      const [habits, setHabits] = useState(storage.get('habits') || null);
+      const [scorecards, setScorecards] = useState(storage.get('scorecards') || {});
+      const [screen, setScreen] = useState('home');
+      const [selectedDate, setSelectedDate] = useState(null);
+
+      useEffect(() => {
+        if (showSplash) {
+          sessionStorage.setItem('splashShown', 'true');
+          
+          setTimeout(() => setSplashStage('tagline'), 2000);
+          setTimeout(() => setSplashStage('letters'), 3500);
+          setTimeout(() => setSplashStage('done'), 5000);
+          setTimeout(() => setShowSplash(false), 5500);
+        }
+      }, [showSplash]);
+
+      useEffect(() => {
+        storage.set('habits', habits);
+      }, [habits]);
+
+      useEffect(() => {
+        storage.set('scorecards', scorecards);
+      }, [scorecards]);
+
+      useEffect(() => {
+        if (!showSplash && !habits) {
+          setScreen('setup');
+        }
+      }, [showSplash, habits]);
+
+      if (showSplash) {
+        return h(SplashScreen, { stage: splashStage });
+      }
+
+      const props = {
+        habits,
+        setHabits,
+        scorecards,
+        setScorecards,
+        screen,
+        setScreen,
+        selectedDate,
+        setSelectedDate
+      };
+
+      if (screen === 'setup') return h(SetupScreen, props);
+      if (screen === 'scorecard') return h(ScorecardScreen, props);
+      if (screen === 'calendar') return h(CalendarScreen, props);
+      if (screen === 'edit') return h(EditHabitsScreen, props);
+      
+      return h(HomeScreen, props);
+    }
+
+    function SplashScreen({ stage }) {
+      return h('div', { className: "fixed inset-0 bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 flex items-center justify-center overflow-hidden" },
+        stage === 'roll' && h('div', { className: "roll-animation" },
+          h('div', { className: "w-32 h-32 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-black" },
+            h('div', { className: "grid grid-cols-3 gap-2 p-4" },
+              [0,1,2,3,4,5,6,7,8].map(i =>
+                h('div', { key: i, className: "w-6 h-6 rounded-full bg-blue-600" })
+              )
+            )
+          )
+        ),
+        stage === 'tagline' && h('div', { className: "fade-in-up text-center px-6" },
+          h('p', { className: "text-3xl text-white font-bold tracking-wide" }, 
+            'Daily Investment in Continuous Excellence'
+          )
+        ),
+        stage === 'letters' && h('div', { className: "text-center" },
+          ['D', 'I', 'C', 'E'].map((letter, i) =>
+            h('span', {
+              key: letter,
+              className: "grow-letter inline-block text-9xl font-black text-white mx-2",
+              style: { animationDelay: `${i * 0.15}s` }
+            }, letter)
+          )
+        ),
+        stage === 'done' && h('div', { className: "fade-in-up text-center" },
+          h('h1', { className: "text-9xl font-black text-white mb-4" }, 'DICE'),
+          h('p', { className: "text-2xl text-white font-bold" }, 'Daily Investment in Continuous Excellence')
+        )
+      );
+    }
+
+    function SetupScreen({ setHabits, setScreen }) {
+      const [inputs, setInputs] = useState(['', '', '', '', '', '']);
+
+      const handleSubmit = () => {
+        const filledInputs = inputs.filter(i => i.trim());
+        if (filledInputs.length === 6) {
+          setHabits(inputs);
+          setScreen('home');
+        } else {
+          alert('Please enter all 6 habits');
+        }
+      };
+
+      return h('div', { className: "min-h-screen bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 p-6 flex items-center justify-center" },
+        h('div', { className: "max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 border-4 border-black" },
+          h('div', { className: "text-center mb-6" },
+            h('h1', { className: "text-4xl font-black text-blue-600 mb-2" }, '🎲 DICE'),
+            h('p', { className: "text-lg font-bold text-gray-700" }, 'Choose Your 6 Habits'),
+            h('p', { className: "text-sm text-gray-600 mt-2" }, 'What are the 6 things you want to track daily?')
+          ),
+          h('div', { className: "space-y-3 mb-6" },
+            inputs.map((input, i) =>
+              h('input', {
+                key: i,
+                type: 'text',
+                value: input,
+                onChange: (e) => {
+                  const newInputs = [...inputs];
+                  newInputs[i] = e.target.value;
+                  setInputs(newInputs);
+                },
+                placeholder: `Habit ${i + 1} (e.g., Workout, Reading)`,
+                className: "w-full px-4 py-3 bg-white border-2 border-blue-300 rounded-lg text-black font-semibold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600"
+              })
+            )
+          ),
+          h('button', {
+            onClick: handleSubmit,
+            className: "w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all uppercase tracking-wide"
+          }, '🎲 Create My DICE')
+        )
+      );
+    }
+
+    function HomeScreen({ setScreen }) {
+      const quote = getDailyQuote();
+
+      return h('div', { className: "min-h-screen bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 p-6 flex flex-col items-center justify-center" },
+        h('div', { className: "w-full max-w-md" },
+          h('div', { className: "text-center mb-12" },
+            h('div', { className: "inline-flex items-center justify-center gap-3 mb-3" },
+              h('div', { className: "w-16 h-16 bg-white rounded-xl shadow-xl flex items-center justify-center transform rotate-3 border-2 border-black" },
+                h('div', { className: "grid grid-cols-3 gap-1 p-2" },
+                  [0,1,2,3,4,5,6,7,8].map(i =>
+                    h('div', { key: i, className: "w-2 h-2 rounded-full bg-blue-600" })
+                  )
+                )
+              ),
+              h('h1', { className: "text-7xl font-black text-white tracking-tight drop-shadow-lg" }, 'DICE')
+            ),
+            h('p', { className: "text-white font-bold text-lg tracking-wide drop-shadow px-4" }, 
+              'Daily Investment in Continuous Excellence'
+            )
+          ),
+          h('div', { className: "bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-8 border-2 border-white/20" },
+            h('p', { className: "text-white text-center font-semibold text-lg italic" }, 
+              `"${quote}"`
+            )
+          ),
+          h('div', { className: "space-y-4" },
+            h('button', {
+              onClick: () => setScreen('scorecard'),
+              className: "w-full bg-white hover:bg-gray-50 text-blue-600 font-black py-6 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all text-xl uppercase tracking-wide"
+            }, '🎲 Roll Dice'),
+            h('button', {
+              onClick: () => setScreen('edit'),
+              className: "w-full bg-white hover:bg-gray-50 text-blue-600 font-black py-6 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all text-xl uppercase tracking-wide"
+            }, '⚙️ Change Your Dice'),
+            h('button', {
+              onClick: () => setScreen('calendar'),
+              className: "w-full bg-white hover:bg-gray-50 text-blue-600 font-black py-6 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all text-xl uppercase tracking-wide"
+            }, '📅 Dice Rolled')
+          )
+        )
+      );
+    }
+
+    function ScorecardScreen({ habits, scorecards, setScorecards, setScreen }) {
+      const today = new Date().toISOString().split('T')[0];
+      const existingScorecard = scorecards[today];
+      
+      const [date, setDate] = useState(today);
+      const [checks, setChecks] = useState(existingScorecard?.checks || Array(6).fill(false));
+      const [details, setDetails] = useState(existingScorecard?.details || Array(6).fill(''));
+      const [showShareCard, setShowShareCard] = useState(false);
+      const [shareCardImage, setShareCardImage] = useState(null);
+      const shareCardRef = useRef(null);
+
+      const totalChecked = checks.filter(Boolean).length;
+
+      const getDiceDots = (score) => {
+        const patterns = {
+          0: [], 1: [4], 2: [0, 8], 3: [0, 4, 8],
+          4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
+        };
+        return patterns[score] || [];
+      };
+
+      const activeDots = getDiceDots(totalChecked);
+
+      const formatDate = (dateString) => {
+        const d = new Date(dateString);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      };
+
+      const saveScorecard = () => {
+        const newScorecards = { ...scorecards };
+        newScorecards[date] = { checks, details, habits: [...habits] };
+        setScorecards(newScorecards);
+        alert('✅ Scorecard saved!');
+      };
+
+      const copyToClipboard = () => {
+        const text = `🎲 DICE - ${formatDate(date)}\nScore: ${totalChecked}/6\n\n` +
+          habits.map((h, i) => `${checks[i] ? '✅' : '❌'} ${h}${details[i] ? ': ' + details[i] : ''}`).join('\n');
+        
+        navigator.clipboard.writeText(text).then(() => {
+          alert('📋 Copied to clipboard!');
+        });
+      };
+
+      const downloadShareCard = async () => {
+        setShowShareCard(true);
+        
+        setTimeout(async () => {
+          if (!shareCardRef.current) return;
+          
+          try {
+            if (!window.html2canvas) {
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+              await new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+              });
+            }
+            
+            const canvas = await window.html2canvas(shareCardRef.current, {
+              backgroundColor: '#2563eb',
+              scale: 2,
+              logging: false,
+              useCORS: true,
+            });
+            
+            const dataUrl = canvas.toDataURL('image/png');
+            setShareCardImage(dataUrl);
+            setShowShareCard(false);
+            
+            canvas.toBlob(async (blob) => {
+              if (!blob) return;
+              if (navigator.share && navigator.canShare) {
+                try {
+                  const file = new File([blob], `dice-scorecard-${date}.png`, { type: 'image/png' });
+                  if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                      files: [file],
+                      title: 'My DICE Scorecard',
+                      text: `${totalChecked}/6 today! 🎲`
+                    });
+                  }
+                } catch (err) {
+                  console.log('Share cancelled');
+                }
+              }
+            }, 'image/png');
+          } catch (error) {
+            console.error('Error generating image:', error);
+            alert('Error generating scorecard. Please try again.');
+            setShowShareCard(false);
+          }
+        }, 300);
+      };
+
+      const downloadImage = () => {
+        if (!shareCardImage) return;
+        const link = document.createElement('a');
+        link.download = `dice-scorecard-${date}.png`;
+        link.href = shareCardImage;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      return h('div', { className: "min-h-screen bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 p-4 sm:p-6" },
+        h('div', { className: "max-w-2xl mx-auto" },
+          h('button', {
+            onClick: () => setScreen('home'),
+            className: "mb-4 text-white font-bold flex items-center gap-2 hover:underline"
+          },
+            h(ChevronLeft, { size: 20 }),
+            'Back to Home'
+          ),
+          h('div', { className: "text-center mb-6" },
+            h('div', { className: "inline-flex items-center justify-center gap-3 mb-3" },
+              h('div', { className: "w-12 h-12 bg-white rounded-lg shadow-xl flex items-center justify-center transform rotate-3 border-2 border-black" },
+                h('div', { className: "grid grid-cols-3 gap-1 p-2" },
+                  [0,1,2,3,4,5,6,7,8].map(i =>
+                    h('div', { key: i, className: `w-1.5 h-1.5 rounded-full ${activeDots.includes(i) ? 'bg-blue-600' : 'bg-gray-200'}` })
+                  )
+                )
+              ),
+              h('h1', { className: "text-4xl sm:text-5xl font-black text-white tracking-tight drop-shadow-lg" }, 'DICE')
+            ),
+            h('p', { className: "text-sm sm:text-base text-white font-bold tracking-wide drop-shadow" }, 
+              'Daily Investment in Continuous Excellence'
+            )
+          ),
+          h('div', { className: "bg-white rounded-2xl shadow-2xl p-4 sm:p-8 border-4 border-black" },
+            h('div', { className: "mb-4 sm:mb-6" },
+              h('label', { className: "block text-sm font-bold text-black mb-2 uppercase tracking-wide" }, 'Date'),
+              h('input', {
+                type: 'date',
+                value: date,
+                onChange: (e) => setDate(e.target.value),
+                className: "w-full px-4 py-3 bg-white border-3 border-black rounded-lg text-black font-semibold focus:outline-none focus:ring-4 focus:ring-blue-600"
+              })
+            ),
+            h('div', { className: "space-y-3 sm:space-y-4" },
+              habits.map((habit, i) =>
+                h('div', { key: i, className: "bg-blue-50 p-3 sm:p-4 rounded-xl border-2 border-blue-600" },
+                  h('div', { className: "flex items-start gap-2 sm:gap-3 mb-2" },
+                    h('button', {
+                      onClick: () => {
+                        const newChecks = [...checks];
+                        newChecks[i] = !newChecks[i];
+                        setChecks(newChecks);
+                      },
+                      className: `mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 border-2 border-black transition-all ${checks[i] ? 'bg-blue-600' : 'bg-white'}`
+                    },
+                      checks[i] ? h(Check, { size: 18, className: "text-white font-bold" }) : h(X, { size: 18, className: "text-gray-300" })
+                    ),
+                    h('label', { className: "text-blue-900 font-bold text-sm sm:text-base uppercase tracking-wide" }, habit)
+                  ),
+                  h('input', {
+                    type: 'text',
+                    placeholder: `Details about ${habit}...`,
+                    value: details[i],
+                    onChange: (e) => {
+                      const newDetails = [...details];
+                      newDetails[i] = e.target.value;
+                      setDetails(newDetails);
+                    },
+                    className: "w-full px-3 py-2 bg-white border-2 border-blue-300 rounded-lg text-black text-sm focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600"
+                  })
+                )
+              )
+            ),
+            h('div', { className: "flex flex-col sm:flex-row gap-3 mt-6" },
+              h('button', {
+                onClick: saveScorecard,
+                className: "flex-1 bg-green-600 hover:bg-green-700 text-white font-black py-4 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all uppercase tracking-wide"
+              }, '💾 Save'),
+              h('button', {
+                onClick: copyToClipboard,
+                className: "flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-4 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all uppercase tracking-wide flex items-center justify-center gap-2"
+              },
+                h(Copy, { size: 20 }),
+                'Copy Text'
+              ),
+              h('button', {
+                onClick: downloadShareCard,
+                className: "flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all uppercase tracking-wide flex items-center justify-center gap-2"
+              },
+                h(Download, { size: 20 }),
+                'Share Image'
+              )
+            )
+          )
+        ),
+        shareCardImage && h('div', { 
+          className: "fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4",
+          onClick: () => setShareCardImage(null)
+        },
+          h('div', { 
+            className: "relative max-w-md w-full",
+            onClick: (e) => e.stopPropagation()
+          },
+            h('button', {
+              onClick: () => setShareCardImage(null),
+              className: "absolute -top-12 right-0 text-white text-4xl font-bold hover:text-gray-300"
+            }, '✕'),
+            h('img', {
+              src: shareCardImage,
+              alt: "DICE Scorecard",
+              className: "w-full h-auto rounded-2xl shadow-2xl"
+            }),
+            h('div', { className: "mt-4 flex gap-3" },
+              h('button', {
+                onClick: downloadImage,
+                className: "flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-3 px-6 rounded-xl border-4 border-white shadow-lg uppercase tracking-wide"
+              }, '💾 Save'),
+              h('button', {
+                onClick: () => setShareCardImage(null),
+                className: "flex-1 bg-white hover:bg-gray-100 text-black font-black py-3 px-6 rounded-xl border-4 border-white shadow-lg uppercase tracking-wide"
+              }, 'Close')
+            ),
+            h('p', { className: "text-white text-center text-sm mt-3 font-semibold" },
+              'Long-press image to save or share 📲'
+            )
+          )
+        ),
+        showShareCard && h('div', { className: "fixed" , style: { top: '-9999px', left: '-9999px' } },
+          h('div', {
+            ref: shareCardRef,
+            className: "bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 flex flex-col items-center justify-center",
+            style: { width: '1080px', height: '1350px', padding: '80px' }
+          },
+            h('div', { className: "text-center mb-12" },
+              h('p', { className: "text-white text-3xl font-bold mb-4" }, 
+                'Daily Investment in Continuous Excellence'
+              ),
+              h('p', { className: "text-white text-5xl font-black mb-8" }, formatDate(date)),
+              h('div', { className: "flex justify-center mb-8" },
+                h('div', { className: "w-64 h-64 bg-white rounded-3xl border-8 border-black shadow-2xl flex items-center justify-center" },
+                  h('div', { className: "grid grid-cols-3 gap-4 p-8" },
+                    [0,1,2,3,4,5,6,7,8].map(i =>
+                      h('div', { 
+                        key: i, 
+                        className: `w-12 h-12 rounded-full ${activeDots.includes(i) ? 'bg-blue-600' : 'bg-gray-200'}`
+                      })
+                    )
+                  )
+                )
+              ),
+              h('div', { className: "text-white mb-8" },
+                h('div', { className: "text-[200px] font-black leading-none mb-4" }, `${totalChecked}/6`),
+                h('div', { className: "text-6xl font-bold uppercase tracking-widest" }, "Today's Roll")
+              )
+            ),
+            h('div', { className: "bg-white rounded-3xl border-8 border-black p-12 shadow-2xl w-full" },
+              h('h2', { className: "text-5xl font-black text-blue-600 mb-8 uppercase tracking-wide text-center" }, 'Completed'),
+              h('div', { className: "grid grid-cols-2 gap-6" },
+                habits.map((habit, i) => checks[i] &&
+                  h('div', { key: i, className: "flex flex-col gap-3 bg-blue-50 p-6 rounded-xl border-4 border-blue-600" },
+                    h('div', { className: "flex items-center gap-3" },
+                      h('div', { className: "w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center border-2 border-black flex-shrink-0" },
+                        h(Check, { size: 24, className: "text-white" })
+                      ),
+                      h('div', { className: "text-3xl font-black text-blue-900 uppercase" }, habit)
+                    ),
+                    details[i] && h('div', { className: "text-xl text-blue-700 pl-16 break-words" }, details[i])
+                  )
+                )
+              )
+            )
+          )
+        )
+      );
+    }
+
+    function CalendarScreen({ scorecards, setScreen, setSelectedDate }) {
+      const [currentMonth, setCurrentMonth] = useState(new Date());
+
+      const getDaysInMonth = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
+
+        return { daysInMonth, startingDayOfWeek, year, month };
+      };
+
+      const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth);
+
+      const prevMonth = () => {
+        setCurrentMonth(new Date(year, month - 1));
+      };
+
+      const nextMonth = () => {
+        setCurrentMonth(new Date(year, month + 1));
+      };
+
+      const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      return h('div', { className: "min-h-screen bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 p-4 sm:p-6" },
+        h('div', { className: "max-w-4xl mx-auto" },
+          h('button', {
+            onClick: () => setScreen('home'),
+            className: "mb-4 text-white font-bold flex items-center gap-2 hover:underline"
+          },
+            h(ChevronLeft, { size: 20 }),
+            'Back to Home'
+          ),
+          h('div', { className: "bg-white rounded-2xl shadow-2xl p-4 sm:p-8 border-4 border-black" },
+            h('div', { className: "flex items-center justify-between mb-6" },
+              h('button', {
+                onClick: prevMonth,
+                className: "p-2 hover:bg-gray-100 rounded-lg"
+              }, h(ChevronLeft, { size: 32 })),
+              h('h2', { className: "text-2xl sm:text-3xl font-black text-blue-600" }, monthName),
+              h('button', {
+                onClick: nextMonth,
+                className: "p-2 hover:bg-gray-100 rounded-lg"
+              }, h(ChevronRight, { size: 32 }))
+            ),
+            h('div', { className: "grid grid-cols-7 gap-2 mb-2" },
+              ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day =>
+                h('div', { key: day, className: "text-center font-bold text-sm text-gray-600 py-2" }, day)
+              )
+            ),
+            h('div', { className: "grid grid-cols-7 gap-2" },
+              [...Array(startingDayOfWeek)].map((_, i) =>
+                h('div', { key: `empty-${i}` })
+              ),
+              [...Array(daysInMonth)].map((_, i) => {
+                const day = i + 1;
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const scorecard = scorecards[dateStr];
+                const score = scorecard ? scorecard.checks.filter(Boolean).length : null;
+
+                return h('button', {
+                  key: day,
+                  onClick: () => {
+                    if (scorecard) {
+                      alert(`${dateStr}\nScore: ${score}/6\n\n${scorecard.habits.map((h, i) => 
+                        `${scorecard.checks[i] ? '✅' : '❌'} ${h}`
+                      ).join('\n')}`);
+                    }
+                  },
+                  className: `aspect-square flex flex-col items-center justify-center rounded-lg border-2 transition-all ${
+                    scorecard 
+                      ? 'bg-blue-50 border-blue-600 hover:bg-blue-100 cursor-pointer' 
+                      : 'bg-gray-50 border-gray-300'
+                  }`
+                },
+                  h('div', { className: "text-lg font-bold" }, day),
+                  score !== null && h('div', { className: "text-xs font-bold text-blue-600 mt-1" }, `${score}/6`)
+                );
+              })
+            )
+          )
+        )
+      );
+    }
+
+    function EditHabitsScreen({ habits, setHabits, setScreen }) {
+      const [inputs, setInputs] = useState([...habits]);
+
+      const handleSave = () => {
+        const filledInputs = inputs.filter(i => i.trim());
+        if (filledInputs.length === 6) {
+          setHabits(inputs);
+          setScreen('home');
+        } else {
+          alert('Please enter all 6 habits');
+        }
+      };
+
+      return h('div', { className: "min-h-screen bg-gradient-to-br from-blue-700 via-blue-600 to-blue-800 p-6 flex items-center justify-center" },
+        h('div', { className: "max-w-md w-full" },
+          h('button', {
+            onClick: () => setScreen('home'),
+            className: "mb-4 text-white font-bold flex items-center gap-2 hover:underline"
+          },
+            h(ChevronLeft, { size: 20 }),
+            'Back to Home'
+          ),
+          h('div', { className: "bg-white rounded-2xl shadow-2xl p-8 border-4 border-black" },
+            h('div', { className: "text-center mb-6" },
+              h('h1', { className: "text-4xl font-black text-blue-600 mb-2" }, '⚙️ Edit Habits'),
+              h('p', { className: "text-sm text-gray-600" }, 'Update your 6 daily habits')
+            ),
+            h('div', { className: "space-y-3 mb-6" },
+              inputs.map((input, i) =>
+                h('input', {
+                  key: i,
+                  type: 'text',
+                  value: input,
+                  onChange: (e) => {
+                    const newInputs = [...inputs];
+                    newInputs[i] = e.target.value;
+                    setInputs(newInputs);
+                  },
+                  placeholder: `Habit ${i + 1}`,
+                  className: "w-full px-4 py-3 bg-white border-2 border-blue-300 rounded-lg text-black font-semibold focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600"
+                })
+              )
+            ),
+            h('button', {
+              onClick: handleSave,
+              className: "w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-6 rounded-xl border-4 border-black shadow-lg hover:shadow-xl transition-all uppercase tracking-wide"
+            }, '💾 Save Changes')
+          )
+        )
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(h(DiceApp));
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(registration => console.log('SW registered'))
+          .catch(err => console.log('SW registration failed'));
+      });
+    }
+  </script>
+</body>
+</html>
